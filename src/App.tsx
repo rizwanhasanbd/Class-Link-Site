@@ -29,7 +29,8 @@ import { INITIAL_DATA } from "./types";
 import { detectKind, cleanText, normalizeUrl, generateId } from "./utils";
 
 const STORAGE_KEY = "CLASS_LINKS_PORTAL_V1";
-const ADMIN_KEY = "CLASS_LINKS_IS_TEACHER";
+const ADMIN_KEY = "CLASS_LINKS_IS_TEACHER"; // old key, only used to clear it
+const TEACHER_SESSION_KEY = "CLASS_LINKS_TEACHER_SESSION";
 
 const COLORS = [
   "#2563eb", // Royal Blue
@@ -688,6 +689,91 @@ function SubjectModal({
   );
 }
 
+function TeacherLoginModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) {
+        onSuccess();
+      } else if (res.status === 401) {
+        setError("Wrong username or password.");
+      } else {
+        setError("Login is not available right now. Please try again.");
+      }
+    } catch {
+      setError("Could not reach the server. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-5 shadow-xl"
+      >
+        <h3 className="text-lg font-bold text-slate-900">Teacher login</h3>
+        <input
+          autoFocus
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          autoComplete="username"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          autoComplete="current-password"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+        />
+        {error ? <div className="text-sm text-red-600">{error}</div> : null}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={busy || !username || !password}
+            className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {busy ? "Checking…" : "Log in"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
   // Persistence state
   const [data, setData] = useState<StorageData>(() => {
@@ -700,11 +786,14 @@ export default function App() {
     return INITIAL_DATA;
   });
 
-  // Admin teacher toggle
+  // Teacher login: only true after a successful username/password check.
+  // Kept in sessionStorage, so it ends when the tab is closed.
   const [isTeacher, setIsTeacher] = useState<boolean>(() => {
-    return localStorage.getItem(ADMIN_KEY) === "true";
+    localStorage.removeItem(ADMIN_KEY); // clear the old free-toggle flag
+    return sessionStorage.getItem(TEACHER_SESSION_KEY) === "1";
   });
 
+  const [showLogin, setShowLogin] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -721,7 +810,8 @@ export default function App() {
   }, [data]);
 
   useEffect(() => {
-    localStorage.setItem(ADMIN_KEY, isTeacher ? "true" : "false");
+    if (isTeacher) sessionStorage.setItem(TEACHER_SESSION_KEY, "1");
+    else sessionStorage.removeItem(TEACHER_SESSION_KEY);
   }, [isTeacher]);
 
   const canEdit = isTeacher && editMode;
@@ -1009,8 +1099,9 @@ export default function App() {
     }));
   };
 
-  // Export & Import backup JSON
+  // Export & Import backup JSON (Only accessible by Teacher)
   const exportData = () => {
+    if (!isTeacher) return;
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
@@ -1023,6 +1114,7 @@ export default function App() {
   };
 
   const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isTeacher) return;
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1043,6 +1135,7 @@ export default function App() {
   };
 
   const resetToStarter = () => {
+    if (!isTeacher) return;
     if (
       window.confirm(
         "Reset everything to standard default starter data? Any custom links will be replaced."
@@ -1072,14 +1165,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Teacher Admin Switch */}
+            {/* Teacher login / logout button */}
             <button
               onClick={() => {
-                const next = !isTeacher;
-                setIsTeacher(next);
-                if (!next) setEditMode(false);
+                if (isTeacher) {
+                  setIsTeacher(false);
+                  setEditMode(false);
+                } else {
+                  setShowLogin(true);
+                }
               }}
-              title="Toggle Teacher / Student View"
+              title={isTeacher ? "Log out of Teacher Mode" : "Teacher login"}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
                 isTeacher
                   ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
@@ -1089,12 +1185,12 @@ export default function App() {
               {isTeacher ? (
                 <>
                   <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                  <span className="hidden sm:inline">Teacher Mode</span>
+                  <span className="hidden sm:inline">Teacher · Log out</span>
                 </>
               ) : (
                 <>
                   <UserCheck className="w-4 h-4 text-slate-500" />
-                  <span className="hidden sm:inline">Student View</span>
+                  <span className="hidden sm:inline">Teacher login</span>
                 </>
               )}
             </button>
@@ -1128,37 +1224,39 @@ export default function App() {
             </p>
           </div>
 
-          {/* Quick Data Management (Backup / Restore) */}
-          <div className="flex items-center gap-2 text-xs">
-            <button
-              onClick={exportData}
-              title="Export backup JSON"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-            <label
-              title="Import backup JSON"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import</span>
-              <input
-                type="file"
-                accept=".json"
-                onChange={importData}
-                className="hidden"
-              />
-            </label>
-            <button
-              onClick={resetToStarter}
-              title="Reset default subjects"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* Quick Data Management (teacher only) */}
+          {isTeacher && (
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                onClick={exportData}
+                title="Export backup JSON"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+              <label
+                title="Import backup JSON"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Import</span>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={importData}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={resetToStarter}
+                title="Reset default subjects"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Global Instant Search */}
@@ -1302,21 +1400,27 @@ export default function App() {
                 <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h3 className="text-lg font-bold text-slate-700">No subjects yet</h3>
                 <p className="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
-                  Get started by adding subjects or resetting back to the starter curriculum.
+                  {isTeacher
+                    ? "Get started by adding subjects or resetting back to the starter curriculum."
+                    : "Your teacher hasn't added classes yet. Check back soon."}
                 </p>
                 <div className="mt-4 flex gap-3 justify-center">
-                  <button
-                    onClick={resetToStarter}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow"
-                  >
-                    Load Default Subjects
-                  </button>
-                  <button
-                    onClick={() => setSubjectModal({ type: "add" })}
-                    className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200"
-                  >
-                    Create Custom Subject
-                  </button>
+                  {isTeacher && (
+                    <button
+                      onClick={resetToStarter}
+                      className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow"
+                    >
+                      Load Default Subjects
+                    </button>
+                  )}
+                  {isTeacher && (
+                    <button
+                      onClick={() => setSubjectModal({ type: "add" })}
+                      className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200"
+                    >
+                      Create Custom Subject
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1449,6 +1553,17 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Teacher Login Modal */}
+      {showLogin && (
+        <TeacherLoginModal
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => {
+            setIsTeacher(true);
+            setShowLogin(false);
+          }}
+        />
+      )}
 
       {/* Subject Create / Edit Modal */}
       {subjectModal && (
