@@ -99,7 +99,7 @@ function Field(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...rest}
       className={
-        "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm " +
+        "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base font-medium sm:py-2.5 sm:text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm " +
         (className ?? "")
       }
     />
@@ -110,10 +110,12 @@ function KindBadge({ kind }: { kind: string }) {
   const conf = KIND_CONFIG[kind] ?? KIND_CONFIG.Link;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${conf.bg} ${conf.border} shrink-0`}
+      title={kind}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${conf.bg} ${conf.border}`}
     >
-      {conf.icon}
-      {kind}
+      {React.cloneElement(conf.icon as React.ReactElement, {
+        className: "w-[18px] h-[18px]",
+      })}
     </span>
   );
 }
@@ -128,22 +130,22 @@ function MoveButtons({
   canDown: boolean;
 }) {
   return (
-    <span className="inline-flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200/80">
+    <span className="inline-flex items-center rounded-lg border border-slate-200/80 bg-slate-100 p-0.5">
       <button
         disabled={!canUp}
         onClick={() => onMove("up")}
         title="Move up"
-        className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+        className="rounded p-2 text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-transparent sm:p-1.5"
       >
-        <ChevronUp className="w-3.5 h-3.5" />
+        <ChevronUp className="h-4 w-4" />
       </button>
       <button
         disabled={!canDown}
         onClick={() => onMove("down")}
         title="Move down"
-        className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition"
+        className="rounded p-2 text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-transparent sm:p-1.5"
       >
-        <ChevronDown className="w-3.5 h-3.5" />
+        <ChevronDown className="h-4 w-4" />
       </button>
     </span>
   );
@@ -199,10 +201,10 @@ function LinkRow({
           onChange={(e) => setNote(e.target.value)}
           placeholder="Notes, schedule, or password (optional)"
         />
-        <div className="flex gap-2 justify-end">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
           <button
             onClick={() => setEditing(false)}
-            className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+            className="px-4 py-2.5 sm:px-3.5 sm:py-1.5 text-sm sm:text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
           >
             Cancel
           </button>
@@ -215,7 +217,7 @@ function LinkRow({
                 alert(err.message || "Failed to update link");
               }
             }}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
+            className="px-4 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
           >
             Save Changes
           </button>
@@ -224,54 +226,71 @@ function LinkRow({
     );
   }
 
+  const conf = KIND_CONFIG[link.kind] ?? KIND_CONFIG.Link;
+
   return (
-    <div className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-white/90 hover:bg-white hover:shadow-sm transition-all duration-150">
-      <div className="flex items-start gap-3 min-w-0 flex-1">
-        <KindBadge kind={link.kind} />
-        <div className="min-w-0 flex-1">
+    <div className="group rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:p-3.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <KindBadge kind={link.kind} />
+          <div className="min-w-0 flex-1">
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block break-words text-[15px] font-semibold leading-snug text-slate-800 transition hover:text-indigo-600"
+            >
+              {link.title}
+            </a>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+              <span
+                className="text-[10px] font-bold uppercase tracking-wide"
+                style={{ color: conf.text }}
+              >
+                {link.kind}
+              </span>
+              {link.note && <span className="break-words">{link.note}</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:shrink-0">
+          <button
+            onClick={handleCopy}
+            title="Copy link address"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 sm:h-9 sm:w-9"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </button>
           <a
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-slate-800 hover:text-indigo-600 flex items-center gap-1.5 transition leading-snug group-hover:underline"
+            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 sm:h-9 sm:flex-none sm:text-xs"
           >
-            <span className="truncate">{link.title}</span>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 shrink-0 inline-block opacity-75" />
+            Open
+            <ExternalLink className="h-3.5 w-3.5 opacity-80" />
           </a>
-          {link.note && (
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {link.note}
-            </p>
-          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-        <button
-          onClick={handleCopy}
-          title="Copy link address"
-          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
-        >
-          {copied ? (
-            <Check className="w-4 h-4 text-emerald-600" />
-          ) : (
-            <Copy className="w-4 h-4" />
-          )}
-        </button>
-
-        {edit && (
-          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
-            <MoveButtons
-              onMove={(d) => onMove(link._id, d)}
-              canUp={index > 0}
-              canDown={index < total - 1}
-            />
+      {edit && (
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+          <MoveButtons
+            onMove={(d) => onMove(link._id, d)}
+            canUp={index > 0}
+            canDown={index < total - 1}
+          />
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setEditing(true)}
-              className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-              title="Edit"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50 sm:py-1.5"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="h-3.5 w-3.5" /> Edit
             </button>
             <button
               onClick={() => {
@@ -279,23 +298,13 @@ function LinkRow({
                   onDelete(link._id);
                 }
               }}
-              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
-              title="Delete"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 sm:py-1.5"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
           </div>
-        )}
-
-        <a
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-indigo-600 rounded-lg shadow-sm hover:shadow transition"
-        >
-          Open
-        </a>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -324,7 +333,7 @@ function AddLinks({
             setMany(false);
             setOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50/70 hover:bg-indigo-100 rounded-lg transition"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2.5 sm:px-3 sm:py-1.5 text-sm sm:text-xs font-semibold text-indigo-600 bg-indigo-50/70 hover:bg-indigo-100 rounded-lg transition"
         >
           <Plus className="w-3.5 h-3.5" /> Add Link
         </button>
@@ -333,7 +342,7 @@ function AddLinks({
             setMany(true);
             setOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2.5 sm:px-3 sm:py-1.5 text-sm sm:text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
         >
           <Plus className="w-3.5 h-3.5" /> Batch Paste Many
         </button>
@@ -351,15 +360,15 @@ function AddLinks({
         </div>
         <textarea
           rows={4}
-          className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-mono outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
+          className="w-full rounded-xl border border-slate-200 bg-white p-3 text-base sm:text-sm font-mono outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-sm"
           placeholder={`Lecture 1: Intro | https://zoom.us/j/123456\nLecture 2: Vector Math | https://youtu.be/example\nFormula Sheet | https://drive.google.com/file/d/xyz/view`}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <div className="flex gap-2 justify-end">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
           <button
             onClick={() => setOpen(false)}
-            className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+            className="px-4 py-2.5 sm:px-3.5 sm:py-1.5 text-sm sm:text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
           >
             Cancel
           </button>
@@ -374,7 +383,7 @@ function AddLinks({
                 alert(err.message || "Error adding links");
               }
             }}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
+            className="px-4 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
           >
             Import Links
           </button>
@@ -419,17 +428,17 @@ function AddLinks({
         onChange={(e) => setNote(e.target.value)}
         placeholder="Optional note: class timings, passcode, requirements"
       />
-      <div className="flex gap-2 justify-end">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+          className="px-4 py-2.5 sm:px-3.5 sm:py-1.5 text-sm sm:text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
+          className="px-4 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm"
         >
           Save Link
         </button>
@@ -474,14 +483,14 @@ function ChapterCard({
   const [title, setTitle] = useState(chapter.title);
 
   return (
-    <section className="glass-panel rounded-2xl overflow-hidden border border-slate-200 shadow-sm transition">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div
-        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white/90 border-b border-slate-100"
-        style={{ borderLeft: `6px solid ${color}` }}
+        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-100 bg-white px-3 py-3 sm:px-4"
+        style={{ borderLeft: `5px solid ${color}` }}
       >
         {renaming ? (
           <form
-            className="flex flex-1 items-center gap-2"
+            className="flex w-full flex-col gap-2 sm:flex-row sm:items-center"
             onSubmit={(e) => {
               e.preventDefault();
               try {
@@ -495,73 +504,80 @@ function ChapterCard({
             <Field
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="py-1.5 text-sm"
               autoFocus
             />
-            <button
-              type="submit"
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setRenaming(false)}
-              className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg"
-            >
-              Cancel
-            </button>
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <button
+                type="submit"
+                className="px-4 py-2.5 sm:px-3 sm:py-1.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setRenaming(false)}
+                className="px-4 py-2.5 sm:px-3 sm:py-1.5 text-sm sm:text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         ) : (
           <button
             onClick={() => setOpen(!open)}
-            className="flex flex-1 items-center gap-2.5 text-left py-0.5 group"
+            className="group flex min-w-0 flex-1 basis-48 items-center gap-2 py-1 text-left"
           >
-            <span className="p-1 rounded-md text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-100 transition">
+            <span className="shrink-0 rounded-md p-1 text-slate-400 transition group-hover:bg-slate-100 group-hover:text-slate-700">
               {open ? (
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="h-5 w-5" />
               ) : (
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="h-5 w-5" />
               )}
             </span>
-            <span className="font-bold text-slate-800 text-base tracking-tight">
+            <span className="min-w-0 break-words text-[15px] font-bold leading-snug tracking-tight text-slate-800 sm:text-base">
               {chapter.title}
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
-              {links.length} {links.length === 1 ? "resource" : "resources"}
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              {links.length}
+              <span className="hidden sm:inline">
+                {" "}
+                {links.length === 1 ? "resource" : "resources"}
+              </span>
             </span>
           </button>
         )}
 
         {edit && !renaming && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex w-full items-center justify-between gap-1.5 border-t border-slate-100 pt-2 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
             <MoveButtons
               onMove={(d) => onMove(chapter._id, d)}
               canUp={index > 0}
               canDown={index < total - 1}
             />
-            <button
-              onClick={() => setRenaming(true)}
-              className="p-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
-              title="Rename chapter"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Delete chapter "${chapter.title}" and all its links?`
-                  )
-                ) {
-                  onDelete(chapter._id);
-                }
-              }}
-              className="p-1.5 text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
-              title="Delete chapter"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setRenaming(true)}
+                className="rounded-lg p-2.5 text-slate-600 transition hover:bg-slate-100 hover:text-indigo-600 sm:p-2"
+                title="Rename chapter"
+              >
+                <Edit2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete chapter "${chapter.title}" and all its links?`
+                    )
+                  ) {
+                    onDelete(chapter._id);
+                  }
+                }}
+                className="rounded-lg p-2.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 sm:p-2"
+                title="Delete chapter"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -617,8 +633,8 @@ function SubjectModal({
   const [color, setColor] = useState(initialColor);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-md p-6 bg-white rounded-2xl shadow-xl border border-slate-100 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="sheet-in max-h-[92dvh] w-full max-w-md space-y-4 overflow-y-auto rounded-t-3xl border border-slate-100 bg-white p-5 pb-8 shadow-xl sm:rounded-2xl sm:p-6">
         <h3 className="text-lg font-bold text-slate-900">{title}</h3>
         <form
           className="space-y-4"
@@ -655,7 +671,7 @@ function SubjectModal({
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className="w-8 h-8 rounded-full transition-transform hover:scale-110 relative"
+                  className="w-10 h-10 sm:w-8 sm:h-8 rounded-full transition-transform hover:scale-110 relative"
                   style={{ backgroundColor: c }}
                 >
                   {color === c && (
@@ -668,11 +684,11 @@ function SubjectModal({
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
+              className="px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 sm:bg-transparent hover:bg-slate-100 rounded-xl transition"
             >
               Cancel
             </button>
@@ -728,22 +744,25 @@ function TeacherLoginModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-5 shadow-xl"
+        className="sheet-in w-full max-w-sm space-y-3 rounded-t-3xl bg-white p-5 pb-8 shadow-xl sm:rounded-2xl"
       >
-        <h3 className="text-lg font-bold text-slate-900">Teacher login</h3>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">Teacher login</h3>
+          <p className="mt-0.5 text-xs text-slate-500">Only teachers can edit links. Students can just browse.</p>
+        </div>
         <input
           autoFocus
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
           autoComplete="username"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          className="w-full rounded-xl border border-slate-300 px-3.5 py-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 sm:py-2.5 sm:text-sm"
         />
         <input
           type="password"
@@ -751,21 +770,21 @@ function TeacherLoginModal({
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoComplete="current-password"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+          className="w-full rounded-xl border border-slate-300 px-3.5 py-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 sm:py-2.5 sm:text-sm"
         />
         {error ? <div className="text-sm text-red-600">{error}</div> : null}
-        <div className="flex justify-end gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+            className="px-4 py-2.5 sm:px-3.5 sm:py-1.5 text-sm sm:text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy || !username || !password}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2.5 sm:py-1.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
             {busy ? "Checking…" : "Log in"}
           </button>
@@ -1228,24 +1247,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24">
       {/* Top Banner Navigation */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
-              <BookOpen className="w-5 h-5" />
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-200 sm:h-10 sm:w-10">
+              <BookOpen className="h-5 w-5" />
             </div>
-            <div>
-              <span className="font-extrabold text-slate-900 tracking-tight text-lg">
+            <div className="flex min-w-0 items-center">
+              <span className="truncate text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
                 Class Links
               </span>
-              <span className="hidden sm:inline-block ml-2 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+              <span className="ml-2 hidden rounded border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700 sm:inline-block">
                 Hub
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Teacher login / logout */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => {
                 if (isTeacher) {
@@ -1256,45 +1274,39 @@ export default function App() {
                 }
               }}
               title={isTeacher ? "Log out of Teacher Mode" : "Teacher login"}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+              aria-label={isTeacher ? "Log out of Teacher Mode" : "Teacher login"}
+              className={`inline-flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold transition sm:h-9 sm:w-auto sm:px-3.5 ${
                 isTeacher
-                  ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm"
-                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                  ? "border-indigo-200 bg-indigo-50 text-indigo-700 shadow-sm"
+                  : "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {isTeacher ? (
                 <>
-                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  <ShieldCheck className="h-4 w-4 text-indigo-600" />
                   <span className="hidden sm:inline">Teacher · Log out</span>
                 </>
               ) : (
                 <>
-                  <UserCheck className="w-4 h-4 text-slate-500" />
+                  <UserCheck className="h-4 w-4 text-slate-500" />
                   <span className="hidden sm:inline">Teacher login</span>
                 </>
               )}
             </button>
 
-            {isTeacher && saveStatus && (
-              <span className="hidden sm:inline text-xs text-slate-500">
-                {saveStatus === "saving"
-                  ? "Saving…"
-                  : saveStatus === "saved"
-                  ? "Saved ✓"
-                  : "Not saved"}
-              </span>
-            )}
-
             {isTeacher && (
               <button
                 onClick={() => setEditMode(!editMode)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition ${
+                className={`h-10 rounded-xl px-4 text-sm font-semibold shadow-sm transition sm:h-9 sm:text-xs ${
                   editMode
                     ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                {editMode ? "Done Editing" : "Edit Links"}
+                {editMode ? "Done" : "Edit"}
+                <span className="hidden sm:inline">
+                  {editMode ? " Editing" : " Links"}
+                </span>
               </button>
             )}
           </div>
@@ -1302,35 +1314,55 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
+      <main className="mx-auto max-w-5xl px-4 pt-5 sm:px-6 sm:pt-8">
         {/* Welcome Hero */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              All Class Resources & Recordings
-            </h1>
-            <p className="mt-1 text-slate-500 text-sm">
-              Instant access to live meeting rooms, recorded video lectures, formulas, and study files.
-            </p>
-          </div>
+        <div className="mb-5 sm:mb-7">
+          <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-4xl">
+            All Class Resources{" "}
+            <span className="text-indigo-600">& Recordings</span>
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-slate-500 sm:text-base">
+            Live class links, recorded lectures, formulas and study files, all in one place.
+          </p>
+        </div>
 
-          {/* Quick Data Management (teacher only) */}
-          {isTeacher && (
-            <div className="flex items-center gap-2 text-xs">
+        {/* Teacher tools */}
+        {isTeacher && (
+          <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700">
+              <ShieldCheck className="h-4 w-4" />
+              Teacher mode
+              {saveStatus && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    saveStatus === "saving"
+                      ? "bg-white text-slate-500"
+                      : saveStatus === "saved"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-rose-100 text-rose-700"
+                  }`}
+                >
+                  {saveStatus === "saving"
+                    ? "Saving…"
+                    : saveStatus === "saved"
+                    ? "Saved ✓"
+                    : "Not saved"}
+                </span>
+              )}
+            </div>
+            <div className="ml-auto flex items-center gap-2 text-xs">
               <button
                 onClick={exportData}
                 title="Export backup JSON"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 sm:h-9"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Export</span>
+                <Download className="h-3.5 w-3.5" /> Export
               </button>
               <label
                 title="Import backup JSON"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium cursor-pointer"
+                className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 sm:h-9"
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Import</span>
+                <Upload className="h-3.5 w-3.5" /> Import
                 <input
                   type="file"
                   accept=".json"
@@ -1341,28 +1373,29 @@ export default function App() {
               <button
                 onClick={resetToStarter}
                 title="Reset default subjects"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-sm font-medium"
+                aria-label="Reset default subjects"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 sm:h-9 sm:w-9"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" />
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Global Instant Search */}
-        <div className="relative mb-6">
-          <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="relative mb-5">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
           <Field
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search lectures, chapters, Zoom links, formula sheets..."
-            className="pl-11 pr-4 py-3 text-base rounded-2xl border-slate-200/90 shadow-sm"
+            placeholder="Search lectures or links…"
+            className="h-12 rounded-2xl pl-11 pr-20 shadow-sm"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-md"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-200 hover:text-slate-700"
             >
               Clear
             </button>
@@ -1371,36 +1404,36 @@ export default function App() {
 
         {/* Search Results Display */}
         {term && (
-          <div className="mb-8 p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+          <div className="mb-8 space-y-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <span>
                 Search results ({searchResults.length}{" "}
                 {searchResults.length === 1 ? "match" : "matches"})
               </span>
-              <span>“{search}”</span>
+              <span className="min-w-0 truncate normal-case">“{search}”</span>
             </div>
             {searchResults.length === 0 ? (
-              <div className="text-center py-8 text-sm text-slate-400">
+              <div className="py-8 text-center text-sm text-slate-400">
                 No links found matching your query.
               </div>
             ) : (
               searchResults.map(({ link, subject, chapter }) => (
                 <div
                   key={link._id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-white transition"
+                  className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 transition hover:border-slate-200 hover:bg-white sm:flex-row sm:items-center"
                 >
-                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
                     <KindBadge kind={link.kind} />
                     <div className="min-w-0 flex-1">
                       <a
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-slate-800 hover:text-indigo-600 truncate block hover:underline"
+                        className="block break-words font-semibold leading-snug text-slate-800 hover:text-indigo-600"
                       >
                         {link.title}
                       </a>
-                      <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
                         <span
                           className="font-semibold"
                           style={{ color: subject?.color }}
@@ -1408,11 +1441,13 @@ export default function App() {
                           {subject?.name}
                         </span>
                         <span>•</span>
-                        <span>{chapter?.title}</span>
+                        <span className="break-words">{chapter?.title}</span>
                         {link.note && (
                           <>
                             <span>•</span>
-                            <span className="text-slate-400">{link.note}</span>
+                            <span className="break-words text-slate-400">
+                              {link.note}
+                            </span>
                           </>
                         )}
                       </div>
@@ -1422,7 +1457,7 @@ export default function App() {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="self-end sm:self-center px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-indigo-600 rounded-lg shadow-sm transition"
+                    className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 sm:h-9 sm:shrink-0 sm:text-xs"
                   >
                     Open
                   </a>
@@ -1435,8 +1470,8 @@ export default function App() {
         {/* Normal Browsing View */}
         {!term && (
           <>
-            {/* Subject Pill Navigation Tabs */}
-            <div className="mb-6 flex flex-wrap items-center gap-2">
+            {/* Subject Pill Navigation Tabs (swipe sideways on phones) */}
+            <div className="no-scrollbar -mx-4 mb-5 flex snap-x gap-2 overflow-x-auto px-4 pb-2 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
               {subjects.map((s) => {
                 const isActive = activeSubject?._id === s._id;
                 const linkCount = links.filter((l) => l.subjectId === s._id).length;
@@ -1444,7 +1479,7 @@ export default function App() {
                   <button
                     key={s._id}
                     onClick={() => setSelectedSubjectId(s._id)}
-                    className="group inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 border shadow-sm"
+                    className="group inline-flex shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-2xl border px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 sm:py-2"
                     style={
                       isActive
                         ? {
@@ -1462,7 +1497,7 @@ export default function App() {
                   >
                     <span>{s.name}</span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                         isActive
                           ? "bg-white/20 text-white"
                           : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
@@ -1477,16 +1512,16 @@ export default function App() {
               {canEdit && (
                 <button
                   onClick={() => setSubjectModal({ type: "add" })}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-indigo-600 bg-white border border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition shadow-sm"
+                  className="inline-flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-2xl border border-dashed border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-600 shadow-sm transition hover:border-indigo-400 hover:bg-indigo-50/50 sm:py-2"
                 >
-                  <Plus className="w-4 h-4" /> Add Subject
+                  <Plus className="h-4 w-4" /> Add Subject
                 </button>
               )}
             </div>
 
             {/* Empty State when no subjects exist */}
             {subjects.length === 0 && (
-              <div className="text-center py-16 px-4 bg-white rounded-3xl border border-dashed border-slate-300">
+              <div className="text-center py-12 sm:py-16 px-4 bg-white rounded-3xl border border-dashed border-slate-300">
                 <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h3 className="text-lg font-bold text-slate-700">No subjects yet</h3>
                 <p className="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
@@ -1494,11 +1529,11 @@ export default function App() {
                     ? "Get started by adding subjects or resetting back to the starter curriculum."
                     : "Your teacher hasn't added classes yet. Check back soon."}
                 </p>
-                <div className="mt-4 flex gap-3 justify-center">
+                <div className="mt-4 flex flex-wrap gap-3 justify-center">
                   {isTeacher && (
                     <button
                       onClick={resetToStarter}
-                      className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow"
+                      className="px-4 py-2.5 text-sm sm:text-xs font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow"
                     >
                       Load Default Subjects
                     </button>
@@ -1506,7 +1541,7 @@ export default function App() {
                   {isTeacher && (
                     <button
                       onClick={() => setSubjectModal({ type: "add" })}
-                      className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200"
+                      className="px-4 py-2.5 text-sm sm:text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200"
                     >
                       Create Custom Subject
                     </button>
@@ -1519,21 +1554,21 @@ export default function App() {
             {activeSubject && (
               <div className="space-y-4">
                 {/* Active Subject Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-200/80 pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <span
-                      className="w-4 h-4 rounded-full inline-block shadow-sm"
+                      className="inline-block h-3.5 w-3.5 shrink-0 rounded-full shadow-sm"
                       style={{ backgroundColor: activeSubject.color }}
                     />
                     <h2
-                      className="text-2xl font-black tracking-tight"
+                      className="min-w-0 break-words text-xl font-black tracking-tight sm:text-2xl"
                       style={{ color: activeSubject.color }}
                     >
                       {activeSubject.name}
                     </h2>
-                    <span className="text-xs font-semibold text-slate-400">
-                      ({activeChapters.length}{" "}
-                      {activeChapters.length === 1 ? "Chapter" : "Chapters"})
+                    <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-400">
+                      {activeChapters.length}{" "}
+                      {activeChapters.length === 1 ? "chapter" : "chapters"}
                     </span>
                   </div>
 
@@ -1551,10 +1586,10 @@ export default function App() {
                             subject: activeSubject,
                           })
                         }
-                        className="p-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
+                        className="rounded-lg p-2.5 text-slate-600 transition hover:bg-slate-100 hover:text-indigo-600 sm:p-2"
                         title="Edit subject name or color"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => {
@@ -1566,10 +1601,10 @@ export default function App() {
                             handleDeleteSubject(activeSubject._id);
                           }
                         }}
-                        className="p-1.5 text-xs font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                        className="rounded-lg p-2.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 sm:p-2"
                         title="Delete subject"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   )}
@@ -1622,17 +1657,17 @@ export default function App() {
                         alert(err.message);
                       }
                     }}
-                    className="mt-6 flex gap-2 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm"
+                    className="mt-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row"
                   >
                     <Field
                       value={newChapterTitle}
                       onChange={(e) => setNewChapterTitle(e.target.value)}
-                      placeholder={`Add new chapter to ${activeSubject.name} (e.g. Chapter 4: Thermodynamics)`}
+                      placeholder={`New chapter in ${activeSubject.name}`}
                       required
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shrink-0 shadow-sm transition"
+                      className="px-5 py-3 sm:py-2 text-sm sm:text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shrink-0 shadow-sm transition"
                     >
                       + Add Chapter
                     </button>
