@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import type { InputHTMLAttributes } from "react";
 import {
   ExternalLink,
@@ -694,7 +694,7 @@ function TeacherLoginModal({
   onSuccess,
 }: {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (token: string) => void;
 }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -712,7 +712,8 @@ function TeacherLoginModal({
         body: JSON.stringify({ username, password }),
       });
       if (res.ok) {
-        onSuccess();
+        const j = await res.json();
+        onSuccess(String(j.token || ""));
       } else if (res.status === 401) {
         setError("Wrong username or password.");
       } else {
@@ -790,7 +791,7 @@ export default function App() {
   // Kept in sessionStorage, so it ends when the tab is closed.
   const [isTeacher, setIsTeacher] = useState<boolean>(() => {
     localStorage.removeItem(ADMIN_KEY); // clear the old free-toggle flag
-    return sessionStorage.getItem(TEACHER_SESSION_KEY) === "1";
+    return !!sessionStorage.getItem(TEACHER_SESSION_KEY);
   });
 
   const [showLogin, setShowLogin] = useState(false);
@@ -804,14 +805,93 @@ export default function App() {
     | null
   >(null);
 
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+  // Shared storage: everyone reads from the server; only a logged-in teacher saves.
+  const [loaded, setLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const serverEmpty = useRef(false);
+  const fromServer = useRef(false);
+  const saveTimer = useRef<number | undefined>(undefined);
+
+  const fetchShared = async () => {
+    try {
+      const res = await fetch("/api/data", { cache: "no-store" });
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.data && j.data.subjects && j.data.chapters && j.data.links) {
+          fromServer.current = true;
+          serverEmpty.current = false;
+          setData(j.data);
+        } else {
+          serverEmpty.current = true;
+        }
+      }
+    } catch (e) {
+      console.error("Could not load shared data", e);
+    } finally {
+      setLoaded(true);
+    }
+  };
+
+  const saveShared = async (d: StorageData) => {
+    const token = sessionStorage.getItem(TEACHER_SESSION_KEY);
+    if (!token) return;
+    setSaveStatus("saving");
+    try {
+      const res = await fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ data: d }),
+      });
+      if (res.status === 401) {
+        setSaveStatus("");
+        alert("Your teacher session expired. Please log in again.");
+        setIsTeacher(false);
+        setEditMode(false);
+      } else if (!res.ok) {
+        setSaveStatus("error");
+        alert("Could not save to the shared site. This change is only on this device.");
+      } else {
+        setSaveStatus("saved");
+      }
+    } catch {
+      setSaveStatus("error");
+      alert("Could not reach the server. This change is only on this device.");
+    }
+  };
 
   useEffect(() => {
-    if (isTeacher) sessionStorage.setItem(TEACHER_SESSION_KEY, "1");
-    else sessionStorage.removeItem(TEACHER_SESSION_KEY);
+    fetchShared();
+    const onFocus = () => {
+      if (!sessionStorage.getItem(TEACHER_SESSION_KEY)) fetchShared();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (fromServer.current) {
+      fromServer.current = false;
+      return;
+    }
+    if (!isTeacher || !loaded) return;
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => saveShared(data), 600);
+  }, [data]);
+
+  // First time the teacher logs in and the server has nothing yet: publish what they have.
+  useEffect(() => {
+    if (isTeacher && loaded && serverEmpty.current) {
+      serverEmpty.current = false;
+      saveShared(data);
+    }
+  }, [isTeacher, loaded]);
+
+  useEffect(() => {
+    if (!isTeacher) sessionStorage.removeItem(TEACHER_SESSION_KEY);
   }, [isTeacher]);
 
   const canEdit = isTeacher && editMode;
@@ -1165,7 +1245,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Teacher login / logout button */}
+            {/* Teacher login / logout */}
             <button
               onClick={() => {
                 if (isTeacher) {
@@ -1194,6 +1274,16 @@ export default function App() {
                 </>
               )}
             </button>
+
+            {isTeacher && saveStatus && (
+              <span className="hidden sm:inline text-xs text-slate-500">
+                {saveStatus === "saving"
+                  ? "Saving…"
+                  : saveStatus === "saved"
+                  ? "Saved ✓"
+                  : "Not saved"}
+              </span>
+            )}
 
             {isTeacher && (
               <button
@@ -1554,11 +1644,12 @@ export default function App() {
         )}
       </main>
 
-      {/* Teacher Login Modal */}
+      {/* Teacher login modal */}
       {showLogin && (
         <TeacherLoginModal
           onClose={() => setShowLogin(false)}
-          onSuccess={() => {
+          onSuccess={(token) => {
+            sessionStorage.setItem(TEACHER_SESSION_KEY, token);
             setIsTeacher(true);
             setShowLogin(false);
           }}
